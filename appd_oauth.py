@@ -26,15 +26,15 @@ class AppDOAuthExpiryKeyNotFound(AppDOAuthException):
 
 class AppDOAuth:
     def __init__(self, token_url: str, client_id: str, client_secret: str,
-                 config=AppDOAuthConfig()):
+                 config: AppDOAuthConfig = AppDOAuthConfig()):
         self.token_url = token_url
         self.client_id = client_id
         self.client_secret = client_secret
 
         # Private
         self._config = config
-        self._token: str = None
-        self._timer: threading.Timer = None
+        self._token: str | None = None
+        self._timer: threading.Timer | None = None
 
     def get_token(self) -> str:
         """Get access token.
@@ -63,7 +63,7 @@ class AppDOAuth:
         """
         req = f"grant_type=client_credentials&client_id={self.client_id}&client_secret={self.client_secret}"
         raw = req.encode()
-        res: requests.Response = requests.post(self.token_url, data=raw).json()
+        res: dict[str, str] = requests.post(self.token_url, data=raw).json()
 
         logging.debug(f"Requested new token, response: {res}")
 
@@ -83,7 +83,7 @@ class AppDOAuth:
 
         return self._token
 
-    def _set_refresh_token_timer(self, expiry):
+    def _set_refresh_token_timer(self, expiry: int):
         """Private method.
 
         Starts a timer to refresh the access token.
