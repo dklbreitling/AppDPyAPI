@@ -23,7 +23,10 @@ class AppDController:
     def get(self, uri: str, **kwargs: dict[str, str]) -> requests.Response:
         """Wrapper for `requests.get`.
 
-        Adds `output=JSON` parameter and Authorization headers unless they are explicitly passed in `**kwargs`.
+        Automatically adds `auth`'s `AppDOAuthToken` as Bearer token in authorization header in a thread-safe manner,
+        unless a different authorization header is passed in `**kwargs`.
+
+        Adds `output=JSON` parameter unless a different output parameter is passed in `**kwargs`.
 
         Args:
             uri (str): The URI to `GET`.
@@ -32,11 +35,17 @@ class AppDController:
         Returns:
             requests.Response: The API response.
         """
+
+        self.auth.lock_token()
+
         kwargs = self._safe_add_to_kwargs(
             "headers", "Authorization", f"Bearer {self.auth.get_token()}", **kwargs)
         kwargs = self._safe_add_to_kwargs("params", "output", "JSON", **kwargs)
+        res = requests.get(uri, **kwargs)  # type: ignore
 
-        return requests.get(uri, **kwargs)  # type: ignore
+        self.auth.unlock_token()
+
+        return res
 
     def get_applications(self) -> requests.Response:
         """Request applications from the controller, formatted in JSON.
