@@ -17,11 +17,6 @@ Install using pip:
 pip install git+https://github.com/dklbreitling/AppDPyAPI.git
 ```
 
-Install using pipenv:
-```
-pipenv install -e git+https://github.com/dklbreitling/AppDPyAPI.git
-```
-
 ### Usage
 
 This is a basic example of how to use the SDK in a Python application:
