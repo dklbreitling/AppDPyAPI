@@ -45,9 +45,7 @@ class AppDController:
             list[dict[str, str]]: The parsed API response.
         """
         uri = self._get_uri("/controller/rest/applications")
-        res = self.get(uri)
-        if res.status_code != 200:
-            raise AppDException(self._could_not_get_exception_msg("applications", res.status_code))
+        res = self._get_or_raise(uri, f"applications")
         return res.json()
 
     def get_application(self, application_name: str) -> dict[str, str]:
