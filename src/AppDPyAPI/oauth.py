@@ -1,6 +1,7 @@
 import logging
 import requests
 import threading
+import time
 
 from dataclasses import dataclass
 
@@ -120,11 +121,11 @@ class AppDOAuth:
 
         self.lock_token()
         self._token.token = parsed_response[self._config.TOKEN_KEY]
-        self._token.expiry = int(parsed_response[self._config.EXPIRY_KEY])
+        self._token.expiry = int(time.time() + int(parsed_response[self._config.EXPIRY_KEY]) - 1)
         self.unlock_token()
 
         if self._config.keep_refreshing_token:
-            self._set_refresh_token_timer(self._token.expiry)
+            self._set_refresh_token_timer(int(parsed_response[self._config.EXPIRY_KEY]))
 
     def _set_refresh_token_timer(self, expiry: int):
         """Private method.
