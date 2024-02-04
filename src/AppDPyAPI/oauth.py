@@ -56,6 +56,9 @@ class AppDOAuth:
         def __bool__(self):
             return bool(self.token)
 
+        def __len__(self):
+            return len(self.token) if self.token is not None else 0
+
         def __repr__(self):
             return str(self.token)
 
