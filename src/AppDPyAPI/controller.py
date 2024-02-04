@@ -5,6 +5,16 @@ from .oauth import AppDOAuth
 
 
 class AppDController:
+    """AppDynamics controller, authorized using OAuth. Requires an API client.
+    
+    Methods:
+        get(self, uri, **kwargs): Wrapper for `requests.get`, automatically adding Bearer token.
+        get_applications(self): Request all applications from the controller, returning parsed JSON.
+        get_application(self, application_name): Get an application by name, returning parsed JSON.
+        get_business_transactions(self, application_name): Get all business transactions for an app.
+        get_custom_transaction_detection_rules(self, application_id): Get all custom detection rules.
+        get_auto_transaction_detection_rules(self, application_id): Get all automatic detection rules.
+    """
 
     def __init__(self, controller_base_url: str, client_id: str, client_secret: str):
 
@@ -62,7 +72,7 @@ class AppDController:
         return res.json()[0]
 
     def get_business_transactions(self, application_name: str) -> list[dict[str, str]]:
-        """Request all business applications for an application by application name, formatted in JSON.
+        """Request all business transactions for an application by application name, formatted in JSON.
 
         Args:
             application_name (str): The application name.
@@ -122,6 +132,21 @@ class AppDController:
                       object_name: str,
                       expected_status_code: int = 200,
                       **kwargs: dict[str, str]):
+        """Private method.
+        
+        Supports passing `**kwargs` that are then passed on to `get`.
+
+        Args:
+            uri (str): The URI to GET.
+            object_name (str): String describing what is being fetched, e.g. "transaction detection rules".
+            expected_status_code (int, optional): Expected status code of the response. Defaults to 200.
+
+        Raises:
+            AppDException: Raised if the response's status code is not equal to the expected status code.
+
+        Returns:
+            request.Response: The API response.
+        """
         res = self.get(uri, **kwargs)
         if res.status_code != expected_status_code:
             raise AppDException(self._could_not_get_exception_msg(object_name, res.status_code))
@@ -131,7 +156,7 @@ class AppDController:
         return f"Could not get {object_name}, received status code {status_code}"
 
     def _get_uri(self, endpoint: str) -> str:
-        """Private Method.
+        """Private method.
         
         Get the URI for an endpoint.
 

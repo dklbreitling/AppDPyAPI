@@ -37,17 +37,30 @@ class AppDOAuthAuthorizationFailed(AppDOAuthException):
 
 
 class AppDOAuth:
+    """AppDynamics controller authorization using OAuth. Requires an API client."""
 
     @dataclass
     class AppDOauthToken:
+        """Allows token to be used like strings, but with lock and unlock methods and expiry timestamp.
+        
+        Attributes:
+            token (str | None): The Bearer token.
+            expiry (int | None): The token's expiry date as a UNIX timestamp.
+            
+        Methods:
+            lock(self): Acquire the token lock. Should be called before using the token.
+            unlock(self): Release the previously acquired token lock. Should be called after using the token.
+        """
         token: str | None = None
         expiry: int | None = None
         _lock: threading.Lock = threading.Lock()
 
         def lock(self):
+            """Acquire the token lock. Should be called before using the token."""
             self._lock.acquire(blocking=True, timeout=5)
 
         def unlock(self):
+            """Release the previously acquired token lock. Should be called after using the token."""
             self._lock.release()
 
         def __getitem__(self, item: slice) -> str:
@@ -81,9 +94,17 @@ class AppDOAuth:
         return self._token
 
     def lock_token(self):
+        """Wrapper for `self._token.lock()`. 
+        
+        Acquire the token lock. Should be called before using the token.
+        """
         self._token.lock()
 
     def unlock_token(self):
+        """Wrapper for `self._token.unlock()`. 
+        
+        Release the previously acquired token lock. Should be called after using the token.
+        """
         self._token.unlock()
 
     def stop_refreshing_token(self) -> None:
@@ -95,7 +116,7 @@ class AppDOAuth:
     def _refresh_token(self) -> None:
         """Private method.
 
-        Requests a new token and stores it in `self._token`.
+        Acquires token lock. Requests a new token and stores it in `self._token`.
 
         Side Effect: 
             Sets timer to refresh the token if `self._config.keep_refreshing_token` is set to `True`.
