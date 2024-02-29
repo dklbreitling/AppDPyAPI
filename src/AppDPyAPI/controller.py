@@ -27,7 +27,10 @@ class AppDController:
         Automatically adds `auth`'s `AppDOAuthToken` as Bearer token in authorization header in a thread-safe manner,
         unless a different authorization header is passed in `**kwargs`.
 
-        Adds `output=JSON` parameter unless a different output parameter is passed in `**kwargs`.
+        To request JSON from the API (not supported on all endpoints, see docs), 
+        add the `output=JSON` parameter to `**kwargs`.
+        
+        Example: `get(uri, params={"output": "JSON"})`.
 
         Args:
             uri (str): The URI to `GET`.
@@ -37,12 +40,53 @@ class AppDController:
             requests.Response: The API response.
         """
 
+        return self.request("GET", uri, **kwargs)
+
+    def post(self, uri: str, **kwargs: dict[str, str]) -> requests.Response:
+        """Wrapper for `requests.post`.
+
+        Automatically adds `auth`'s `AppDOAuthToken` as Bearer token in authorization header in a thread-safe manner,
+        unless a different authorization header is passed in `**kwargs`.
+
+        To request JSON from the API (not supported on all endpoints, see docs), 
+        add the `output=JSON` parameter to `**kwargs`.
+        
+        Example: `post(uri, params={"output": "JSON"})`.
+
+        Args:
+            uri (str): The URI to `POST`.
+            **kwargs: See `requests.post`. 
+
+        Returns:
+            requests.Response: The API response.
+        """
+        return self.request("POST", uri, **kwargs)
+
+    def request(self, method: str, uri: str, **kwargs: dict[str, str]) -> requests.Response:
+        """Wrapper for `requests.request`.
+        
+        Automatically adds `auth`'s `AppDOAuthToken` as Bearer token in authorization header in a thread-safe manner,
+        unless a different authorization header is passed in `**kwargs`.
+        
+        To request JSON from the API (not supported on all endpoints, see docs), 
+        add the `output=JSON` parameter to `**kwargs`.
+        
+        Example: `request("GET", uri, params={"output": "JSON"})`.
+
+        Args:
+            method (str): "GET", "OPTIONS", "HEAD", "POST", "PUT", "PATCH", or "DELETE"
+            uri (str): The URI to request.
+            **kwargs: See `requests.request`. 
+
+        Returns:
+            requests.Response: The API response.
+        """
+
         self.auth.lock_token()
 
         kwargs = self._safe_add_to_kwargs("headers", "Authorization", f"Bearer {self.auth.get_token()}",
                                           **kwargs)
-        kwargs = self._safe_add_to_kwargs("params", "output", "JSON", **kwargs)
-        res = requests.get(uri, **kwargs)  # type: ignore
+        res = requests.request(method, uri, **kwargs)
 
         self.auth.unlock_token()
 
@@ -54,8 +98,8 @@ class AppDController:
         Returns:
             list[dict[str, str]]: The parsed API response.
         """
-        uri = self._get_uri("/controller/rest/applications")
-        res = self._get_or_raise(uri, f"applications")
+        uri = self._full_uri("/controller/rest/applications")
+        res = self._get_or_raise(uri, f"applications", params={"output": "JSON"})
         return res.json()
 
     def get_application(self, application_name: str) -> dict[str, str]:
@@ -67,8 +111,8 @@ class AppDController:
         Returns:
             list[dict[str, str]]: The parsed API response.
         """
-        uri = self._get_uri(f"/controller/rest/applications/{application_name}")
-        res = self._get_or_raise(uri, f"application {application_name}")
+        uri = self._full_uri(f"/controller/rest/applications/{application_name}")
+        res = self._get_or_raise(uri, f"application {application_name}", params={"output": "JSON"})
         return res.json()[0]
 
     def get_business_transactions(self, application_name: str) -> list[dict[str, str]]:
@@ -80,8 +124,8 @@ class AppDController:
         Returns:
             list[dict[str, str]]: The parsed API response.
         """
-        uri = self._get_uri(f"/controller/rest/applications/{application_name}/business-transactions")
-        res = self._get_or_raise(uri, "business transactions")
+        uri = self._full_uri(f"/controller/rest/applications/{application_name}/business-transactions")
+        res = self._get_or_raise(uri, "business transactions", params={"output": "JSON"})
         return res.json()
 
     def get_custom_transaction_detection_rules(self, application_id: int) -> str:
@@ -94,7 +138,7 @@ class AppDController:
         Returns:
             str: The XML string of transaction detection rules.
         """
-        uri = self._get_uri(f"/controller/transactiondetection/{application_id}/custom")
+        uri = self._full_uri(f"/controller/transactiondetection/{application_id}/custom")
         res = self._get_or_raise(uri, "custom detection rules")
         return res.text
 
@@ -108,7 +152,7 @@ class AppDController:
         Returns:
             str: The XML string of transaction detection rules.
         """
-        uri = self._get_uri(f"/controller/transactiondetection/{application_id}/auto")
+        uri = self._full_uri(f"/controller/transactiondetection/{application_id}/auto")
         res = self._get_or_raise(uri, "auto detection rules")
         return res.text
 
@@ -155,7 +199,7 @@ class AppDController:
     def _could_not_get_exception_msg(self, object_name: str, status_code: int):
         return f"Could not get {object_name}, received status code {status_code}"
 
-    def _get_uri(self, endpoint: str) -> str:
+    def _full_uri(self, endpoint: str) -> str:
         """Private method.
         
         Get the URI for an endpoint.
