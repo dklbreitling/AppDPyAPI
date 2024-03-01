@@ -46,10 +46,6 @@ class AppDOAuth:
         Attributes:
             token (str | None): The Bearer token.
             expiry (int | None): The token's expiry date as a UNIX timestamp.
-            
-        Methods:
-            lock(self): Acquire the token lock. Should be called before using the token.
-            unlock(self): Release the previously acquired token lock. Should be called after using the token.
         """
         token: str | None = None
         expiry: int | None = None

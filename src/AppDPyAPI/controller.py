@@ -6,14 +6,6 @@ from .oauth import AppDOAuth
 
 class AppDController:
     """AppDynamics controller, authorized using OAuth. Requires an API client.
-    
-    Methods:
-        get(self, uri, **kwargs): Wrapper for `requests.get`, automatically adding Bearer token.
-        get_applications(self): Request all applications from the controller, returning parsed JSON.
-        get_application(self, application_name): Get an application by name, returning parsed JSON.
-        get_business_transactions(self, application_name): Get all business transactions for an app.
-        get_custom_transaction_detection_rules(self, application_id): Get all custom detection rules.
-        get_auto_transaction_detection_rules(self, application_id): Get all automatic detection rules.
     """
 
     def __init__(self, controller_base_url: str, client_id: str, client_secret: str):
