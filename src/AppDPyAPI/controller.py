@@ -247,7 +247,6 @@ class AppDController:
             def __inner_request_or_raise_decorator(*args: list[Any]) -> str | list[dict[str, str]]:
                 """Handles arguments passed to function."""
                 self: AppDController = args[0]  # type: ignore
-                args = args[1:]
 
                 bound_args = signature(func).bind(*args).arguments
                 expanded_uri = URITemplate(self._full_uri(uri)).expand(bound_args)
