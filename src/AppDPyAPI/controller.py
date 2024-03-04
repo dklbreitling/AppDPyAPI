@@ -1,3 +1,4 @@
+from typing import Any, Callable
 import requests
 
 from ._common import AppDException
@@ -211,3 +212,55 @@ class AppDController:
             str: The URI.
         """
         return f"{self.CONTROLLER_BASE_URL}{endpoint}"
+
+    @staticmethod
+    def __request_or_raise(method: str,
+                           uri: str,
+                           object_name: str,
+                           json_decode: bool = True,
+                           expected_status_code: int = 200,
+                           **kwargs: dict[str, str]):
+        """Private method.
+
+        Uplink-style decorator for requests. Use like `_request_or_raise` but as decorator.
+
+        URI and object name are expanded at runtime as `URITemplate`.
+
+        Example usage:
+            ```
+            @__request_or_raise("GET",
+                                        "/controller/rest/applications/{application_name}",
+                                        "application {application_name}",
+                                        headers={"myHeader": "value"})
+            def get_application_decorated(application_name):
+                \"""Get application by name.\"""
+            ```
+        """
+
+        from inspect import signature
+        from uritemplate import URITemplate
+
+        def _inner_request_or_raise_decorator(
+                func: Callable[[Any], Any]) -> Callable[[Any], str | list[dict[str, str]]]:
+            """Handles function."""
+
+            def __inner_request_or_raise_decorator(*args: list[Any]) -> str | list[dict[str, str]]:
+                """Handles arguments passed to function."""
+                self: AppDController = args[0]  # type: ignore
+                args = args[1:]
+
+                bound_args = signature(func).bind(*args).arguments
+                expanded_uri = URITemplate(self._full_uri(uri)).expand(bound_args)
+                expanded_object_name = URITemplate(object_name).expand(bound_args)
+
+                k = kwargs
+                if json_decode:
+                    k = self._safe_add_to_kwargs("params", "output", "JSON", **k)
+
+                res: requests.Response = self._request_or_raise(method, expanded_uri, expanded_object_name,
+                                                                expected_status_code, **k)
+                return res.json() if json_decode else res.text
+
+            return __inner_request_or_raise_decorator
+
+        return _inner_request_or_raise_decorator
