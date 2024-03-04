@@ -84,70 +84,6 @@ class AppDController:
 
         return res
 
-    def get_applications(self) -> list[dict[str, str]]:
-        """Request all applications from the controller, formatted in JSON.
-
-        Returns:
-            list[dict[str, str]]: The parsed API response.
-        """
-        uri = self._full_uri("/controller/rest/applications")
-        res = self._get_or_raise(uri, f"applications", params={"output": "JSON"})
-        return res.json()
-
-    def get_application(self, application_name: str) -> list[dict[str, str]]:
-        """Request an application from the controller by application name, formatted in JSON.
-
-        Args:
-            application_name (str): The application name.
-            
-        Returns:
-            dict[str, str]: The parsed API response.
-        """
-        uri = self._full_uri(f"/controller/rest/applications/{application_name}")
-        res = self._get_or_raise(uri, f"application {application_name}", params={"output": "JSON"})
-        return res.json()
-
-    def get_business_transactions(self, application_name: str) -> list[dict[str, str]]:
-        """Request all business transactions for an application by application name, formatted in JSON.
-
-        Args:
-            application_name (str): The application name.
-            
-        Returns:
-            list[dict[str, str]]: The parsed API response.
-        """
-        uri = self._full_uri(f"/controller/rest/applications/{application_name}/business-transactions")
-        res = self._get_or_raise(uri, "business transactions", params={"output": "JSON"})
-        return res.json()
-
-    def get_custom_transaction_detection_rules(self, application_id: int) -> str:
-        """Request all custom transaction detection rules for an application by application ID,
-        formatted in XML.
-        
-        Args:
-            application_id (int): The application ID.
-
-        Returns:
-            str: The XML string of transaction detection rules.
-        """
-        uri = self._full_uri(f"/controller/transactiondetection/{application_id}/custom")
-        res = self._get_or_raise(uri, "custom detection rules")
-        return res.text
-
-    def get_auto_transaction_detection_rules(self, application_id: int) -> str:
-        """Request all automatic transaction detection rules for an application by application ID,
-        formatted in XML.
-
-        Args:
-            application_id (int): The application ID.
-
-        Returns:
-            str: The XML string of transaction detection rules.
-        """
-        uri = self._full_uri(f"/controller/transactiondetection/{application_id}/auto")
-        res = self._get_or_raise(uri, "auto detection rules")
-        return res.text
-
     def _safe_add_to_kwargs(self, parent_key: str, child_key: str, value: str,
                             **kwargs: dict[str, str]) -> dict[str, dict[str, str]]:
         """Private Method. 
@@ -218,6 +154,7 @@ class AppDController:
                            uri: str,
                            object_name: str,
                            json_decode: bool = True,
+                           single_element: bool = False,
                            expected_status_code: int = 200,
                            **kwargs: dict[str, str]):
         """Private method.
@@ -253,13 +190,124 @@ class AppDController:
                 expanded_object_name = URITemplate(object_name).expand(bound_args)
 
                 k = kwargs
-                if json_decode:
+                json = json_decode or single_element
+
+                if json:
                     k = self._safe_add_to_kwargs("params", "output", "JSON", **k)
 
                 res: requests.Response = self._request_or_raise(method, expanded_uri, expanded_object_name,
                                                                 expected_status_code, **k)
-                return res.json() if json_decode else res.text
+
+                if json:
+                    return res.json() if not single_element else res.json()[0]
+
+                return res.text
 
             return __inner_request_or_raise_decorator
 
         return _inner_request_or_raise_decorator
+
+    @__request_or_raise("GET", "/controller/rest/applications", "applications")
+    def get_applications(self) -> list[dict[str, str]]:  # type: ignore
+        """Request all applications from the controller, formatted in JSON.
+
+        Returns:
+            list[dict[str, str]]: The parsed API response.
+        """
+
+    @__request_or_raise("GET",
+                        "/controller/rest/applications/{application_name}",
+                        "application {application_name}",
+                        single_element=True)  # type: ignore
+    def get_application(self, application_name: str) -> dict[str, str]:  # type: ignore
+        """Request an application from the controller by application name, formatted in JSON.
+
+        Args:
+            application_name (str): The application name.
+
+        Returns:
+            dict[str, str]: The parsed API response.
+        """
+
+    @__request_or_raise("GET", "/controller/rest/applications/{application_name}/business-transactions",
+                        "business transaction for {application_name}")  # type: ignore
+    def get_business_transactions(self, application_name: str) -> list[dict[str, str]]:  # type: ignore
+        """Request all business transactions for an application by application name, formatted in JSON.
+
+        Args:
+            application_name (str): The application name.
+
+        Returns:
+            list[dict[str, str]]: The parsed API response.
+        """
+
+    @__request_or_raise("GET",
+                        "/controller/transactiondetection/{application_id}/custom",
+                        "custom detection rules for application with ID {application_id}",
+                        json_decode=False)  # type: ignore
+    def get_custom_transaction_detection_rules(self, application_id: int) -> str:  # type: ignore
+        """Request all custom transaction detection rules for an application by application ID,
+        formatted in XML.
+
+        Args:
+            application_id (int): The application ID.
+
+        Returns:
+            str: The XML string of transaction detection rules.
+        """
+
+    @__request_or_raise("GET",
+                        "/controller/transactiondetection/{application_id}/auto",
+                        "auto detection rules for application with ID {application_id}",
+                        json_decode=False)  # type: ignore
+    def get_auto_transaction_detection_rules(self, application_id: int) -> str:  # type: ignore
+        """Request all automatic transaction detection rules for an application by application ID,
+        formatted in XML.
+
+        Args:
+            application_id (int): The application ID.
+
+        Returns:
+            str: The XML string of transaction detection rules.
+        """
+
+    @__request_or_raise("GET", "/controller/mds/v1/license/rules", "license rules")
+    def get_license_rules(self):
+        """Requires Agent-Based Licensing (ABL). Get license rules."""
+
+    def get_account_id(self) -> int:
+        return int(
+            self._get_or_raise(self._full_uri("/controller/api/accounts/myaccount"),
+                               "account info",
+                               params={
+                                   "output": "json"
+                               }).json()["id"])
+
+    @__request_or_raise("GET", "/controller/licensing/v1/account/{accountId}/allocation",
+                        "licensing allocations for account {accountId}")  #type: ignore
+    def get_license_allocations(self, accountId: int):
+        """Requires Infrastructure-Based Licensing (IBL). Retrieve all license allocations for account with ID `accountId`.
+
+        Args:
+            accountId (int): The account ID.
+
+        Returns:
+            list[dict[str, str | int | list[str]]]: The parsed API response.
+        """
+
+    @__request_or_raise(
+        "GET", "/controller/licensing/v1/account/{accountId}/allocation?name={allocation_name}",
+        "licensing allocations for account {accountId} for allocation {allocation_name}")  #type: ignore
+    def get_license_allocation_by_name(self, accountId: int, allocation_name: str):
+        """Requires Infrastructure-Based Licensing (IBL). Like `get_license_allocations`, but additionally filtered by allocation name."""
+
+    @__request_or_raise(
+        "GET", "/controller/licensing/v1/account/{accountId}/allocation?license-key={license_key}",
+        "licensing allocations for account {accountId} for allocation {license_key}")  #type: ignore
+    def get_license_allocation_by_license_key(self, accountId: int, license_key: str):
+        """Requires Infrastructure-Based Licensing (IBL). Like `get_license_allocations`, but additionally filtered by license key."""
+
+    @__request_or_raise("GET", "/controller/licensing/v1/account/{accountId}/allocation?tag={tag}",
+                        "licensing allocations for account {accountId} for allocation {tag}")  #type: ignore
+    def get_license_allocations_by_tag(self, accountId: int, tag: str):
+        """Requires Infrastructure-Based Licensing (IBL). Like `get_license_allocations`, but additionally filtered by tag assocatied with allocations."""
