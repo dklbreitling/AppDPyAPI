@@ -186,7 +186,7 @@ class AppDController:
         """
         res = self.request(method, uri, **kwargs)
         if res.status_code != expected_status_code:
-            raise AppDException(self._could_not_get_exception_msg(object_name, res.status_code))
+            raise AppDException(self._could_not_get_exception_msg(object_name, res.status_code, res.text))
         return res
 
     def _get_or_raise(self,
@@ -197,8 +197,8 @@ class AppDController:
         """Private method. Convenience wrapper for `_request_or_raise`."""
         return self._request_or_raise("GET", uri, object_name, expected_status_code, **kwargs)
 
-    def _could_not_get_exception_msg(self, object_name: str, status_code: int) -> str:
-        return f"Could not get {object_name}, received status code {status_code}"
+    def _could_not_get_exception_msg(self, object_name: str, status_code: int, res: str) -> str:
+        return f"Could not get {object_name}, received status code {status_code}.\nRaw response: {res}"
 
     def _full_uri(self, endpoint: str) -> str:
         """Private method.
