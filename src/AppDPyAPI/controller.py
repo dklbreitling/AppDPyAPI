@@ -102,7 +102,7 @@ class AppDController:
     def _request_or_raise(self,
                           method: str,
                           uri: str,
-                          object_name: str,
+                          object_name: str = "",
                           expected_status_code: int = 200,
                           **kwargs: dict[str, str]) -> requests.Response:
         """Private method.
@@ -110,8 +110,9 @@ class AppDController:
         Supports passing `**kwargs` that are then passed on to `request`.
 
         Args:
+            method (str): "GET", "OPTIONS", "HEAD", "POST", "PUT", "PATCH", or "DELETE"
             uri (str): The URI to request.
-            object_name (str): String describing what is being fetched, e.g. "transaction detection rules".
+            object_name (str): String describing what is being fetched, e.g. "transaction detection rules". Defaults to `uri` if empty.
             expected_status_code (int, optional): Expected status code of the response. Defaults to 200.
 
         Raises:
@@ -122,7 +123,9 @@ class AppDController:
         """
         res = self.request(method, uri, **kwargs)
         if res.status_code != expected_status_code:
-            raise AppDException(self._could_not_get_exception_msg(object_name, res.status_code, res.text))
+            raise AppDException(
+                self._could_not_get_exception_msg(method, object_name if object_name else uri,
+                                                  res.status_code, res.text))
         return res
 
     def _get_or_raise(self,
@@ -133,8 +136,8 @@ class AppDController:
         """Private method. Convenience wrapper for `_request_or_raise`."""
         return self._request_or_raise("GET", uri, object_name, expected_status_code, **kwargs)
 
-    def _could_not_get_exception_msg(self, object_name: str, status_code: int, res: str) -> str:
-        return f"Could not get {object_name}, received status code {status_code}.\nRaw response: {res}"
+    def _could_not_get_exception_msg(self, method: str, object_name: str, status_code: int, res: str) -> str:
+        return f"Could not {method} {object_name}, received status code {status_code}.\nRaw response: {res}"
 
     def _full_uri(self, endpoint: str) -> str:
         """Private method.
@@ -152,7 +155,7 @@ class AppDController:
     @staticmethod
     def __request_or_raise(method: str,
                            uri: str,
-                           object_name: str,
+                           object_name: str = "",
                            json_decode: bool = True,
                            single_element: bool = False,
                            expected_status_code: int = 200,
@@ -161,17 +164,25 @@ class AppDController:
 
         Uplink-style decorator for requests. Use like `_request_or_raise` but as decorator.
 
-        URI and object name are expanded at runtime as `URITemplate`.
+        URI and object name are expanded at runtime as `URITemplate`, (!) "self" cannot be used as a URI parameter.
 
         Example usage:
             ```
             @__request_or_raise("GET",
-                                        "/controller/rest/applications/{application_name}",
-                                        "application {application_name}",
-                                        headers={"myHeader": "value"})
+                                "/controller/rest/applications/{application_name}",
+                                "application {application_name}",
+                                headers={"myHeader": "value"})
             def get_application_decorated(application_name):
                 \"""Get application by name.\"""
             ```
+
+        Args:
+            method (str): "GET", "OPTIONS", "HEAD", "POST", "PUT", "PATCH", or "DELETE"
+            uri (str): The URI to request.
+            object_name (str, optional): String describing what is being fetched. Defaults to `uri` if empty.
+            json_decode (bool, optional): Call `res.json()` on response? Adds params={"output": "json"} to request if set to True. Defaults to True.
+            single_element (bool, optional): If True, json_decode will also be set to True, and `res.json()[0]` will be returned. Defaults to False.
+            expected_status_code (int, optional): Expected status code of the response. Defaults to 200.
         """
 
         from inspect import signature
@@ -186,8 +197,10 @@ class AppDController:
                 self: AppDController = args[0]  # type: ignore
 
                 bound_args = signature(func).bind(*args).arguments
+                if "self" in bound_args:
+                    del bound_args["self"]
                 expanded_uri = URITemplate(self._full_uri(uri)).expand(bound_args)
-                expanded_object_name = URITemplate(object_name).expand(bound_args)
+                expanded_object_name = URITemplate(object_name).expand(bound_args) if object_name else ""
 
                 k = kwargs
                 json = json_decode or single_element
