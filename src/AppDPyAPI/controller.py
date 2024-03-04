@@ -162,17 +162,18 @@ class AppDController:
             kwargs[parent_key][child_key] = value
         return kwargs
 
-    def _get_or_raise(self,
-                      uri: str,
-                      object_name: str,
-                      expected_status_code: int = 200,
-                      **kwargs: dict[str, str]):
+    def _request_or_raise(self,
+                          method: str,
+                          uri: str,
+                          object_name: str,
+                          expected_status_code: int = 200,
+                          **kwargs: dict[str, str]) -> requests.Response:
         """Private method.
         
-        Supports passing `**kwargs` that are then passed on to `get`.
+        Supports passing `**kwargs` that are then passed on to `request`.
 
         Args:
-            uri (str): The URI to GET.
+            uri (str): The URI to request.
             object_name (str): String describing what is being fetched, e.g. "transaction detection rules".
             expected_status_code (int, optional): Expected status code of the response. Defaults to 200.
 
@@ -182,12 +183,20 @@ class AppDController:
         Returns:
             requests.Response: The API response.
         """
-        res = self.get(uri, **kwargs)
+        res = self.request(method, uri, **kwargs)
         if res.status_code != expected_status_code:
             raise AppDException(self._could_not_get_exception_msg(object_name, res.status_code))
         return res
 
-    def _could_not_get_exception_msg(self, object_name: str, status_code: int):
+    def _get_or_raise(self,
+                      uri: str,
+                      object_name: str,
+                      expected_status_code: int = 200,
+                      **kwargs: dict[str, str]) -> requests.Response:
+        """Private method. Convenience wrapper for `_request_or_raise`."""
+        return self._request_or_raise("GET", uri, object_name, expected_status_code, **kwargs)
+
+    def _could_not_get_exception_msg(self, object_name: str, status_code: int) -> str:
         return f"Could not get {object_name}, received status code {status_code}"
 
     def _full_uri(self, endpoint: str) -> str:
