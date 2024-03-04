@@ -9,7 +9,6 @@ class AppDController:
     """
 
     def __init__(self, controller_base_url: str, client_id: str, client_secret: str):
-
         self.CONTROLLER_BASE_URL = controller_base_url
         self.auth: AppDOAuth = AppDOAuth(controller_base_url, client_id, client_secret)
 
@@ -78,7 +77,7 @@ class AppDController:
 
         kwargs = self._safe_add_to_kwargs("headers", "Authorization", f"Bearer {self.auth.get_token()}",
                                           **kwargs)
-        res = requests.request(method, uri, **kwargs)
+        res = requests.request(method, uri, **kwargs)  # type: ignore
 
         self.auth.unlock_token()
 
@@ -94,18 +93,18 @@ class AppDController:
         res = self._get_or_raise(uri, f"applications", params={"output": "JSON"})
         return res.json()
 
-    def get_application(self, application_name: str) -> dict[str, str]:
+    def get_application(self, application_name: str) -> list[dict[str, str]]:
         """Request an application from the controller by application name, formatted in JSON.
 
         Args:
             application_name (str): The application name.
             
         Returns:
-            list[dict[str, str]]: The parsed API response.
+            dict[str, str]: The parsed API response.
         """
         uri = self._full_uri(f"/controller/rest/applications/{application_name}")
         res = self._get_or_raise(uri, f"application {application_name}", params={"output": "JSON"})
-        return res.json()[0]
+        return res.json()
 
     def get_business_transactions(self, application_name: str) -> list[dict[str, str]]:
         """Request all business transactions for an application by application name, formatted in JSON.
@@ -181,7 +180,7 @@ class AppDController:
             AppDException: Raised if the response's status code is not equal to the expected status code.
 
         Returns:
-            request.Response: The API response.
+            requests.Response: The API response.
         """
         res = self.get(uri, **kwargs)
         if res.status_code != expected_status_code:
