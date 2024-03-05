@@ -2,3 +2,4 @@ requests
 sphinx
 sphinxcontrib-napoleon
 sphinx-rtd-theme
+uritemplate
