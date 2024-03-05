@@ -187,12 +187,15 @@ class AppDController:
 
         from inspect import signature
         from uritemplate import URITemplate
+        from functools import wraps
 
         def _inner_request_or_raise_decorator(
                 func: Callable[[Any], Any]) -> Callable[[Any], str | list[dict[str, str]]]:
             """Handles function."""
 
-            def __inner_request_or_raise_decorator(*args: list[Any]) -> str | list[dict[str, str]]:
+            @wraps(func)
+            def __inner_request_or_raise_decorator(*args: list[Any],
+                                                   **kwargs: dict[str, str]) -> str | list[dict[str, str]]:
                 """Handles arguments passed to function."""
                 self: AppDController = args[0]  # type: ignore
 
