@@ -189,6 +189,8 @@ class AppDController:
         from uritemplate import URITemplate
         from functools import wraps
 
+        outer_kwargs = kwargs
+
         def _inner_request_or_raise_decorator(
                 func: Callable[[Any], Any]) -> Callable[[Any], str | list[dict[str, str]]]:
             """Handles function."""
@@ -205,7 +207,10 @@ class AppDController:
                 expanded_uri = URITemplate(self._full_uri(uri)).expand(bound_args)
                 expanded_object_name = URITemplate(object_name).expand(bound_args) if object_name else ""
 
-                k = kwargs
+                k = outer_kwargs
+                if "json" in kwargs:
+                    k["json"] = kwargs["json"]
+
                 json = json_decode or single_element
 
                 if json:
